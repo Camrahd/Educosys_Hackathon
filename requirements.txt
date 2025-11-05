@@ -1,0 +1,11 @@
+langgraph
+langchain
+langchain-groq
+langchain-openai
+langchain-huggingface
+tiktoken>=0.7.0
+pypdf
+python-dotenv>=1.0.1
+langchain-community
+langchain-chroma
+sentence-transformers
