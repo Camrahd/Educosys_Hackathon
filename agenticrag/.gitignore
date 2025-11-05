@@ -1,0 +1,9 @@
+rag_env/
+__pycache__/
+db.sqlite3
+*.log
+media/
+staticfiles/
+static/
+*/migrations/
+/migrations/__init__.py
