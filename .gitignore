@@ -1,0 +1,22 @@
+# Ignore environment folders
+env/
+venv/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore vector DB and SQLite
+*.sqlite3
+*.bin
+*.db
+
+# Ignore zip files and large archives
+*.zip
+*.rar
+
+# Ignore local config files
+.env
