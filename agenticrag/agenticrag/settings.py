@@ -69,6 +69,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'agenticrag.wsgi.application'
+import os
+TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
 
 
 # Database

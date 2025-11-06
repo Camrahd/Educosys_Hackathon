@@ -7,3 +7,4 @@ staticfiles/
 static/
 */migrations/
 /migrations/__init__.py
+.env
