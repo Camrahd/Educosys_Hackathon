@@ -78,8 +78,12 @@ TEMPLATES[0]["DIRS"] = [os.path.join(BASE_DIR, "templates")]
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',  # PostgreSQL driver
+        'NAME': 'agentic_rag',               # Replace with your DB name
+        'USER': 'postgres',                    # Replace with your DB username
+        'PASSWORD': 'root',                # Replace with your DB password
+        'HOST': 'localhost',                        # Use '127.0.0.1' if needed
+        'PORT': '5432',                             # Default PostgreSQL port
     }
 }
 
