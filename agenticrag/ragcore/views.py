@@ -66,7 +66,7 @@ def generate_file_metadata(filename: str, chunks: List[str], filetype: str):
     """
 
     try:
-        metadata = await call_llm(prompt)
+        metadata =  call_llm(prompt)
         required_fields = ['title', 'summary', 'topics', 'keywords', 'document_type', 'main_subject']
 
         if not all(field in metadata for field in required_fields):
