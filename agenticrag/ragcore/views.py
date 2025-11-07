@@ -10,9 +10,18 @@ from django.conf import settings
 import json
 from .rag.loader import load_document
 from .rag.vectorstore import get_vectorstore
+from .models import RAG, RAGFile
 
 
 def index(request):
+    if request.method == "POST":
+        rag_name = request.POST.get("ragName", "").strip()
+        files = request.FILES.getlist("files")
+        rag_description = request.POST.get("ragDescription", "").strip()
+        # Here you can handle the RAG creation logic    
+        rag_inst = RAG.objects.create(name=rag_name, description=rag_description)
+        for file in files:
+            RAGFile.objects.create(rag=rag_inst, file=file)
     return render(request, "index.html")
 
 
