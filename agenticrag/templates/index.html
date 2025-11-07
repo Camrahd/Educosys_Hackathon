@@ -1,164 +1,379 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Agentic RAG</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  {% csrf_token %}
-  <style>
-    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --accent:#4f46e5; }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
-    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
-    .card { background: var(--card); border: 1px solid #1f2937; border-radius: 16px; padding: 20px; }
-    .row { display:flex; gap:12px; align-items:center; }
-    .col { display:flex; flex-direction:column; gap:8px; }
-    .btn { background: var(--accent); color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600; }
-    .btn:disabled { opacity:.5; cursor:not-allowed; }
-    .input, textarea { width:100%; background:#0b1220; border:1px solid #1f2937; color:var(--text); padding:10px 12px; border-radius:10px; outline:none; }
-    textarea { min-height:80px; resize:vertical; }
-    .muted { color: var(--muted); font-size: 0.9rem; }
-    .pill { padding:4px 8px; border-radius:999px; background:#0b1220; border:1px solid #1f2937; color:#c7d2fe; font-size:.8rem; }
-    .messages { display:flex; flex-direction:column; gap:12px; max-height: 52vh; overflow:auto; padding-right:6px; }
-    .msg { padding:12px 14px; border-radius:14px; line-height:1.5; border:1px solid #1f2937; }
-    .msg.user { background:#111827; align-self:flex-end; }
-    .msg.bot { background:#0b1220; }
-    .divider { height:1px; background:#1f2937; margin:16px 0; }
-    .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic RAG Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f7fafc;
+        }
+
+        .file-input-wrapper:hover {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        .file-input-wrapper.dragover {
+            border-color: #667eea;
+            background: #e6f2ff;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-text {
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .file-list.show {
+            display: block;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .file-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .file-item span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .remove-file {
+            color: #e53e3e;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .create-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .create-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .create-btn:active {
+            transform: translateY(0);
+        }
+
+        .create-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .success-message {
+            display: none;
+            padding: 12px;
+            background: #c6f6d5;
+            color: #22543d;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h2>🧠 Agentic RAG Console</h2>
-      <span class="pill">Django</span>
-    </div>
-
-    <!-- Upload Documents -->
-    <div class="card" style="margin-bottom:18px;">
-      <h3 style="margin:0 0 8px 0;">📂 Ingest Documents</h3>
-      <p class="muted" style="margin:0 0 12px 0;">Upload PDFs, text, or markdown. They’ll be embedded into your vector store.</p>
-      <form id="upload-form" class="row" enctype="multipart/form-data">
-        <input class="input" type="file" id="files" name="files" multiple accept=".pdf,.txt,.md,.csv,.docx" />
-        <button class="btn" id="upload-btn" type="submit">Upload</button>
-      </form>
-      <div id="upload-status" class="muted" style="margin-top:8px;"></div>
-    </div>
-
-    <!-- Chat / Ask -->
-    <div class="card">
-      <h3 style="margin:0 0 8px 0;">💬 Ask your knowledge base</h3>
-      <div class="messages" id="messages"></div>
-      <div class="divider"></div>
-      <div class="col">
-        <textarea id="question" placeholder="Ask anything about your uploaded docs..."></textarea>
-        <div class="row">
-          <input class="input" id="metadata" placeholder='Optional: metadata filters as JSON, e.g. {"source":"policy.pdf"}' />
-          <button class="btn" id="ask-btn">Ask</button>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Agentic RAG Creator</h1>
+            <p>Build intelligent knowledge retrieval systems with ease</p>
         </div>
-        <span class="muted">Tip: try “Summarize all docs in 5 bullets with citations.”</span>
-      </div>
+
+        <form id="ragForm" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+            <div class="form-group">
+                <label for="ragName">RAG System Name *</label>
+                <input 
+                    type="text" 
+                    id="ragName" 
+                    name="ragName" 
+                    placeholder="e.g., Customer Support Knowledge Base"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="ragDescription">RAG Description</label>
+                <textarea 
+                    id="ragDescription" 
+                    name="ragDescription" 
+                    placeholder="Provide a high-level description of your RAG system's purpose and scope..."
+                    rows="4"
+                ></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Upload Knowledge Base Files *</label>
+                <div class="file-input-wrapper" id="fileWrapper">
+                    <input 
+                        type="file" 
+                        id="files" 
+                        name="files" 
+                        multiple 
+                        accept=".pdf,.txt,.doc,.docx,.md"
+                    >
+                    <div class="file-icon">📁</div>
+                    <div class="file-text">
+                        <strong>Click to upload</strong> or drag and drop<br>
+                        <small>PDF, TXT, DOC, DOCX, MD files supported</small>
+                    </div>
+                </div>
+                <div class="file-list" id="fileList"></div>
+            </div>
+
+            <button type="submit" class="create-btn" id="createBtn">
+                Create Agentic RAG
+            </button>
+
+            <div class="success-message" id="successMessage">
+                ✓ Agentic RAG system created successfully!
+            </div>
+        </form>
     </div>
-  </div>
 
-  <script>
-    // CSRF helper (Django)
-    function getCookie(name) {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
-    }
-    const csrftoken = getCookie('csrftoken');
+    <script>
+        let selectedFiles = [];
+        const fileInput = document.getElementById('files');
+        const fileWrapper = document.getElementById('fileWrapper');
+        const fileList = document.getElementById('fileList');
+        const form = document.getElementById('ragForm');
+        const successMessage = document.getElementById('successMessage');
 
-    // DOM elements
-    const uploadForm = document.getElementById('upload-form');
-    const uploadBtn = document.getElementById('upload-btn');
-    const uploadStatus = document.getElementById('upload-status');
-    const askBtn = document.getElementById('ask-btn');
-    const messages = document.getElementById('messages');
-    const questionEl = document.getElementById('question');
-    const metadataEl = document.getElementById('metadata');
-
-    function addMessage(text, role = 'bot') {
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.textContent = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    // Upload handler
-    uploadForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const filesInput = document.getElementById('files');
-      if (!filesInput.files.length) {
-        uploadStatus.textContent = 'Please choose at least one file.';
-        return;
-      }
-      uploadBtn.disabled = true;
-      uploadStatus.textContent = 'Uploading & indexing…';
-
-      const formData = new FormData();
-      for (const f of filesInput.files) formData.append('files', f);
-
-      try {
-        const res = await fetch('/upload/', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': csrftoken },
-          body: formData
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Upload failed');
-        uploadStatus.textContent = `Indexed ${data.indexed_count || 0} file(s).`;
-      } catch (err) {
-        uploadStatus.textContent = `Error: ${err.message}`;
-      } finally {
-        uploadBtn.disabled = false;
-      }
-    });
-
-    // Ask handler
-    askBtn.addEventListener('click', async () => {
-      const q = questionEl.value.trim();
-      if (!q) return;
-      addMessage(q, 'user');
-      questionEl.value = '';
-      askBtn.disabled = true;
-
-      let filters = null;
-      if (metadataEl.value.trim()) {
-        try { filters = JSON.parse(metadataEl.value.trim()); }
-        catch { addMessage('⚠️ Invalid JSON in metadata filters. Ignoring.', 'bot'); }
-      }
-
-      try {
-        const res = await fetch('/ask/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrftoken
-          },
-          body: JSON.stringify({ question: q, filters })
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            handleFiles(e.target.files);
         });
 
-        // If your /ask/ streams text/plain, adapt here with ReadableStream
-        if (res.headers.get('Content-Type')?.includes('application/json')) {
-          const data = await res.json();
-          addMessage(data.answer || 'No answer returned.', 'bot');
-          if (data.citations?.length) {
-            addMessage('Sources: ' + data.citations.map(c => c.title || c.id).join(', '), 'bot');
-          }
-        } else {
-          const text = await res.text();
-          addMessage(text || 'No answer returned.', 'bot');
+        // Drag and drop handlers
+        fileWrapper.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileWrapper.classList.add('dragover');
+        });
+
+        fileWrapper.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            fileWrapper.classList.remove('dragover');
+        });
+
+        fileWrapper.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileWrapper.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            displayFiles();
         }
-      } catch (err) {
-        addMessage('Error: ' + err.message, 'bot');
-      } finally {
-        askBtn.disabled = false;
-      }
-    });
-  </script>
+
+        function displayFiles() {
+            if (selectedFiles.length === 0) {
+                fileList.classList.remove('show');
+                return;
+            }
+
+            fileList.classList.add('show');
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <span>${file.name}</span>
+                    <span class="remove-file" onclick="removeFile(${index})">✕</span>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            displayFiles();
+        }
+
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            
+            
+            const ragName = document.getElementById('ragName').value;
+            
+            if (!ragName) {
+                alert('Please enter a RAG system name');
+                e.preventDefault();
+                return;
+            }
+
+            if (selectedFiles.length === 0) {
+                alert('Please upload at least one file');
+                e.preventDefault();
+                return;
+            }
+
+            // Simulate creation process
+            const createBtn = document.getElementById('createBtn');
+            createBtn.disabled = true;
+            // createBtn.textContent = 'Creating...';
+
+            // setTimeout(() => {
+            //     successMessage.classList.add('show');
+            //     createBtn.disabled = false;
+            //     createBtn.textContent = 'Create Agentic RAG';
+                
+            //     const ragDescription = document.getElementById('ragDescription').value;
+            //     console.log('RAG Name:', ragName);
+            //     console.log('RAG Description:', ragDescription);
+            //     console.log('Files:', selectedFiles.map(f => f.name));
+
+            //     // Reset form after 2 seconds
+            //     setTimeout(() => {
+            //         form.reset();
+            //         selectedFiles = [];
+            //         displayFiles();
+            //         successMessage.classList.remove('show');
+            //     }, 2000);
+            // }, 1500);
+        });
+    </script>
 </body>
 </html>
