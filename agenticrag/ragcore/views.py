@@ -12,6 +12,89 @@ from .rag.loader import load_document
 from .rag.vectorstore import get_vectorstore
 from .models import RAG, RAGFile
 
+from datetime import datetime
+from typing import List
+
+async def generate_file_metadata(filename: str, chunks: List[str], filetype: str):
+    total_chunks = len(chunks)
+
+    """If smaller chunks -> no need to extract metadata dynamically"""
+    if total_chunks <= 10:
+        # Use all chunks to extract metadata
+        metadata_chunks = chunks
+    else:
+        """Triggers when we have larger chunks for larger docs"""
+        # Beginning, middle, and end
+        indices = [
+            0, 1, 2, 3, 4, 5,  # First 5 chunks
+            total_chunks // 4,  # Quarter of chunks
+            total_chunks // 2,  # Middle of chunks
+            3 * total_chunks // 4,  # Three quarters
+            total_chunks - 5, total_chunks - 4, total_chunks - 3, total_chunks - 2, total_chunks - 1  # Last 5 chunks
+        ]
+        metadata_chunks = [chunks[i] for i in indices if i < total_chunks]
+
+    # Combine chunks
+    metadata_text = "\n\n---\n\n".join(metadata_chunks)
+
+    # Generate metadata prompt
+    prompt = f"""
+    Analyze this document and extract metadata.
+    Filename: {filename}
+    Type: {filetype}
+    Total chunks: {total_chunks}
+
+    Document sample (from beginning, middle, and end):
+    {metadata_text}
+
+    Generate metadata in JSON format:
+    {{
+        "title": "descriptive title",
+        "summary": "2-3 sentence summary of document content and purpose",
+        "topics": ["main topic 1", "main topic 2", "main topic 3"],
+        "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
+        "document_type": "FAQ/specification/guide/report/manual/procedure/other",
+        "main_subject": "primary subject matter"
+    }}
+
+    IMPORTANT:
+    - Extract topics from the content (e.g., "quality management", "procedures") specific to the document uploaded.
+    - Extract keywords people would search for (e.g., "owner", "approver", "permissions", "workflow") specific to the document uploaded.
+    - Be comprehensive — include all important terms mentioned.
+    - Look at table content, text content, and captions.
+    Respond ONLY with valid JSON.
+    """
+
+    try:
+        metadata = await call_llm(prompt)
+        required_fields = ['title', 'summary', 'topics', 'keywords', 'document_type', 'main_subject']
+
+        if not all(field in metadata for field in required_fields):
+            raise ValueError("Missing required metadata fields")
+
+        # Add extra fields
+        metadata['filename'] = filename
+        metadata['filetype'] = filetype
+        metadata['total_chunks'] = total_chunks
+        metadata['generated_at'] = datetime.now().isoformat()
+
+        return metadata
+
+    except Exception as e:
+        # Fallback -> return basic metadata
+        return {
+            "filename": filename,
+            "filetype": filetype,
+            "total_chunks": total_chunks,
+            "title": filename,
+            "summary": f"Document uploaded: {filename}",
+            "topics": [],
+            "keywords": [],
+            "document_type": "unknown",
+            "main_subject": "unknown",
+            "generated_at": datetime.now().isoformat()
+        }
+
 
 def index(request):
     if request.method == "POST":
