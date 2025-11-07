@@ -15,7 +15,7 @@ from .models import RAG, RAGFile
 from datetime import datetime
 from typing import List
 
-async def generate_file_metadata(filename: str, chunks: List[str], filetype: str):
+def generate_file_metadata(filename: str, chunks: List[str], filetype: str):
     total_chunks = len(chunks)
 
     """If smaller chunks -> no need to extract metadata dynamically"""
