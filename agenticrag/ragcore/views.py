@@ -15,6 +15,12 @@ from .models import RAG, RAGFile
 from datetime import datetime
 from typing import List
 
+def call_llm(prompt):
+    #write llm invocation code
+    pass
+
+
+
 def generate_file_metadata(filename: str, chunks: List[str], filetype: str):
     total_chunks = len(chunks)
 
@@ -105,6 +111,12 @@ def index(request):
         rag_inst = RAG.objects.create(name=rag_name, description=rag_description)
         for file in files:
             RAGFile.objects.create(rag=rag_inst, file=file)
+            #steps to follow:
+                #find the file type and parse the file based on type
+                #generate chunks
+                #create emebeddings with chunks
+                #store in vector db
+                #generate metadata with generate_file_metadata function and store in RAGFile metadata field => code available
     return render(request, "index.html")
 
 
@@ -149,7 +161,7 @@ def upload_files(request):
 
 
 @csrf_exempt
-def ask_question(request):
+def ask_question(request, slug=""):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=400)
 
