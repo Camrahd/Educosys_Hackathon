@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>My RAGs</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; padding:24px; background:#fafafa}
+    h1{margin-bottom:12px}
+    .actions{margin:8px 0 20px}
+    .actions a{display:inline-block;padding:8px 12px;border-radius:8px;background:#10b981;color:#fff;text-decoration:none}
+    .grid{display:grid; gap:16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));}
+    .card{border:1px solid #e5e7eb; border-radius:12px; padding:16px; background:#fff}
+    .card h3{margin:0 0 6px 0}
+    .muted{color:#6b7280}
+    .small{color:#9ca3af; font-size:12px}
+    .btn{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:8px;background:#6366f1;color:#fff;text-decoration:none}
+    .btn:hover{filter:brightness(1.05)}
+  </style>
+</head>
+<body>
+  <h1>📚 Your RAG Collections</h1>
+  <div class="actions"><a href="/">+ Create new RAG</a></div>
+
+  <div class="grid">
+    {% for rag in rags %}
+      <div class="card">
+        <h3>{{ rag.name }}</h3>
+        <p class="muted">{{ rag.description|default:"No description" }}</p>
+        <p class="small">slug: {{ rag.slug }} • created {{ rag.created_at }}</p>
+        <a class="btn" href="{% url 'rag_detail' rag.slug %}">Open</a>
+      </div>
+    {% empty %}
+      <p>No RAGs yet. Create one from the home page.</p>
+    {% endfor %}
+  </div>
+</body>
+</html>

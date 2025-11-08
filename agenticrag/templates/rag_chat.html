@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ rag.name }} — RAG Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0f172a; --muted:#94a3b8; --text:#e5e7eb; --accent:#8b5cf6; --accent-2:#22c55e;
+      --border:#1f2937; --bubble:#0b1226; --bubble-user:#121e46; --shadow:0 10px 30px rgba(2,6,23,.4);
+    }
+    [data-theme="light"]{
+      --bg:#f7f7fb; --panel:#ffffff; --muted:#6b7280; --text:#0f172a; --accent:#4f46e5; --accent-2:#059669;
+      --border:#e5e7eb; --bubble:#f8fafc; --bubble-user:#eef2ff; --shadow:0 10px 30px rgba(2,6,23,.08);
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif, system-ui, Segoe UI, Roboto, Ubuntu;
+      background: radial-gradient(1000px 600px at -10% -10%, rgba(139,92,246,.12), transparent 60%),
+                  radial-gradient(1000px 600px at 110% 110%, rgba(34,197,94,.10), transparent 60%),
+                  var(--bg);
+      color:var(--text); display:grid; grid-template-columns:320px 1fr; gap:0; min-height:100vh;
+    }
+    aside{
+      border-right:1px solid var(--border); background:linear-gradient(180deg,rgba(139,92,246,.06),transparent 18%),
+                                                  linear-gradient(180deg,rgba(34,197,94,.06),transparent 26%),
+                                                  var(--panel);
+      padding:18px; overflow:auto;
+    }
+    .brand{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .logo{
+      width:36px;height:36px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--accent),#06b6d4); color:white; font-weight:900; box-shadow:var(--shadow)
+    }
+    .brand h3{margin:0;font-size:18px}
+    .muted{color:var(--muted)}
+    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;
+           background:rgba(139,92,246,.16); color:var(--text); font-size:12px; border:1px solid var(--border)}
+    .files h4{margin:14px 0 8px 0}
+    .file{
+      display:flex; flex-direction:column; gap:4px; padding:10px; margin-bottom:10px; border:1px solid var(--border);
+      background:var(--panel); border-radius:12px;
+    }
+    .file a{color:var(--text); text-decoration:none}
+    .file .meta{font-size:12px; color:var(--muted)}
+    .links{margin-top:12px}
+    .links a{color:var(--accent); text-decoration:none}
+    .sep{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent); margin:14px 0}
+
+    main{display:flex; flex-direction:column; height:100vh}
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:14px 18px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(15,23,42,.35),transparent), var(--panel);
+      position:sticky; top:0; z-index:10;
+    }
+    .title{display:flex;gap:10px;align-items:center}
+    .pill{font-size:12px; padding:4px 8px; border:1px solid var(--border); border-radius:999px; color:var(--muted)}
+    .actions{display:flex; gap:8px; align-items:center}
+    .btn{
+      border:1px solid var(--border); background:var(--panel); color:var(--text); padding:8px 10px; border-radius:10px;
+      cursor:pointer; transition:.2s; display:inline-flex; gap:8px; align-items:center;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),#06b6d4); color:white; border:none}
+    .btn.ghost{background:transparent}
+    .toggle{width:42px;height:26px;border-radius:999px; background:var(--bubble); border:1px solid var(--border); position:relative}
+    .toggle::after{content:""; position:absolute; width:18px; height:18px; border-radius:50%;
+      top:3px; left:3px; background:linear-gradient(135deg,#ffffff, #cbd5e1); transition:.2s}
+    [data-theme="light"] .toggle::after{transform:translateX(16px)}
+
+    #chat{flex:1; overflow:auto; padding:20px; display:flex; flex-direction:column; gap:14px}
+    .msg{
+      display:flex; gap:10px; align-items:flex-start;
+      animation: fadeIn .2s ease;
+    }
+    .avatar{
+      width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font-weight:800; flex:0 0 auto;
+      background:linear-gradient(135deg,#1d4ed8,#22c55e); color:white;
+    }
+    .avatar.user{background:linear-gradient(135deg,#4f46e5,#8b5cf6)}
+    .bubble{
+      background:var(--bubble); border:1px solid var(--border); color:var(--text);
+      padding:12px 14px; border-radius:14px; box-shadow:var(--shadow); max-width:800px;
+    }
+    .me .bubble{background:var(--bubble-user)}
+    .meta-row{display:flex; gap:10px; align-items:center; margin-top:6px; flex-wrap:wrap}
+    .chip{display:inline-flex; gap:6px; align-items:center; padding:4px 8px; border-radius:999px; font-size:12px;
+          border:1px solid var(--border); background:rgba(99,102,241,.12)}
+    .time{font-size:12px; color:var(--muted)}
+    .copy{cursor:pointer; font-size:12px; color:var(--muted); border:1px dashed var(--border); padding:4px 6px; border-radius:8px}
+    .typing{display:inline-flex; gap:6px; align-items:center}
+    .dots{display:inline-flex; gap:4px; align-items:center}
+    .dots span{width:6px; height:6px; border-radius:50%; background:var(--muted); opacity:.6; animation: bounce 1s infinite}
+    .dots span:nth-child(2){animation-delay:.15s} .dots span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(3px)} to{opacity:1; transform:translateY(0)}}
+
+    .composer{
+      position:sticky; bottom:0; background:linear-gradient(0deg, var(--panel), rgba(15,23,42,.6));
+      border-top:1px solid var(--border); padding:12px 16px; display:grid; gap:8px;
+    }
+    .row{
+      display:flex; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--border);
+      border-radius:14px; padding:8px;
+    }
+    .input{
+      flex:1; border:none; outline:none; background:transparent; color:var(--text); font-size:16px; padding:8px;
+    }
+    .send{border:none; background:linear-gradient(135deg,var(--accent),#06b6d4); color:white; padding:10px 14px; border-radius:12px; cursor:pointer}
+    .hint{font-size:12px; color:var(--muted); text-align:right; padding:0 4px}
+    .hidden{display:none}
+    @media (max-width: 980px){
+      body{grid-template-columns:1fr}
+      aside{display:none}
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <div class="brand">
+      <div class="logo">R</div>
+      <div>
+        <h3>{{ rag.name }}</h3>
+        <div class="muted">{{ rag.description|default:"No description" }}</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="badge" title="Chroma collection">
+      <span>📚</span> <code style="opacity:.8">rag_{{ rag.slug }}</code>
+    </div>
+
+    <div class="files">
+      <h4>Files</h4>
+      <div style="margin:8px 0" class="muted">Sources included in this RAG</div>
+      <div>
+        {% for f in files %}
+          <div class="file">
+            <a href="{{ f.file.url }}" target="_blank" rel="noreferrer">📄 {{ f.file.name }}</a>
+            {% if f.metadata.title %}
+              <div class="meta">{{ f.metadata.title }}</div>
+            {% endif %}
+            <div class="meta">Uploaded: {{ f.uploaded_at }}</div>
+          </div>
+        {% empty %}
+          <div class="muted">No files uploaded.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="links">
+      <a href="{% url 'rags_list' %}">← Back to all RAGs</a>
+    </div>
+  </aside>
+
+  <main data-theme="dark" id="root">
+    <header>
+      <div class="title">
+        <div class="pill">Model: {{ OPENAI_MODEL|default:"gpt-4o-mini" }}</div>
+        <div class="pill">RAG mode</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="regenerateBtn" title="Regenerate last answer">↻ Regenerate</button>
+        <button class="btn ghost" id="clearBtn" title="Clear chat">🗑️ Clear</button>
+        <div class="toggle" id="themeToggle" title="Toggle theme"></div>
+      </div>
+    </header>
+
+    <div id="chat"></div>
+
+    <form id="chatForm" class="composer">
+      {% csrf_token %}
+      <div class="row">
+        <input id="q" class="input" type="text" placeholder="Ask about this RAG… (Cmd/Ctrl + Enter to send)" autocomplete="off"/>
+        <button class="send" type="submit">Send</button>
+      </div>
+      <div class="hint">Tip: Cite sources appear under each answer • Use Cmd/Ctrl + Enter to send</div>
+    </form>
+  </main>
+
+  <script>
+    // -- Elements
+    const root = document.getElementById('root');
+    const chat = document.getElementById('chat');
+    const form = document.getElementById('chatForm');
+    const q = document.getElementById('q');
+    const clearBtn = document.getElementById('clearBtn');
+    const regenBtn = document.getElementById('regenerateBtn');
+    const themeToggle = document.getElementById('themeToggle');
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Build /rags/<slug>/ask/ from current path
+    const askUrl = (() => {
+      let p = window.location.pathname;
+      if (!p.endsWith('/')) p += '/';
+      return p + 'ask/';
+    })();
+
+    // -- Theme
+    const initTheme = localStorage.getItem('theme') || 'dark';
+    root.setAttribute('data-theme', initTheme);
+    themeToggle.addEventListener('click', () => {
+      const cur = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', cur);
+      localStorage.setItem('theme', cur);
+    });
+
+    // -- Helpers
+    function avatar(isUser){
+      const el = document.createElement('div');
+      el.className = 'avatar' + (isUser ? ' user' : '');
+      el.textContent = isUser ? 'U' : 'A';
+      return el;
+    }
+    function timeNow(){
+      const d = new Date(); return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+    function addMsg(html, isUser=false, citations=[]){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg' + (isUser ? ' me' : '');
+      const av = avatar(isUser);
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = html;
+
+      const meta = document.createElement('div');
+      meta.className = 'meta-row';
+
+      const t = document.createElement('span');
+      t.className = 'time';
+      t.textContent = timeNow();
+
+      const copy = document.createElement('span');
+      copy.className = 'copy';
+      copy.textContent = 'Copy';
+      copy.addEventListener('click', () => {
+        navigator.clipboard.writeText(bubble.innerText);
+        copy.textContent = 'Copied!';
+        setTimeout(()=> copy.textContent='Copy', 900);
+      });
+
+      meta.appendChild(t);
+      meta.appendChild(copy);
+
+      if (!isUser && citations && citations.length){
+        citations.forEach(c=>{
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.innerHTML = '🔗 <code>'+ c +'</code>';
+          meta.appendChild(chip);
+        });
+      }
+
+      bubble.appendChild(meta);
+      wrap.appendChild(av);
+      wrap.appendChild(bubble);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+      return bubble;
+    }
+
+    function addTyping(){
+      const wrap = document.createElement('div');
+      wrap.className = 'msg';
+      const av = avatar(false);
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = `<span class="typing">Thinking <span class="dots"><span></span><span></span><span></span></span></span>`;
+      wrap.appendChild(av); wrap.appendChild(bubble);
+      chat.appendChild(wrap);
+      chat.scrollTop = chat.scrollHeight;
+      return wrap;
+    }
+
+    let history = []; // keep last user prompt for regenerate
+    let lastAnswer = null;
+
+    // -- Submit
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const question = q.value.trim();
+      if (!question) return;
+
+      // user bubble
+      addMsg(question, true);
+      history.push(question);
+      q.value = '';
+
+      // typing indicator
+      const typing = addTyping();
+
+      try{
+        const resp = await fetch(askUrl, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken},
+          body: JSON.stringify({ question })
+        });
+        const data = await resp.json();
+        typing.remove();
+
+        if(!resp.ok){
+          addMsg(`<em class="muted">Error: ${data.error || resp.status}</em>`);
+          return;
+        }
+
+        // simple “stream-like” reveal
+        const bubble = addMsg('', false, data.citations || []);
+        const txt = (data.answer || '(no answer)').split('');
+        let i=0;
+        const tick = () => {
+          if(i<txt.length){
+            bubble.firstChild ? bubble.childNodes[0].nodeValue += txt[i] : bubble.insertAdjacentText('afterbegin', txt[i]);
+            i++; requestAnimationFrame(tick);
+          }
+        };
+        bubble.insertAdjacentText('afterbegin', '');
+        requestAnimationFrame(tick);
+        lastAnswer = data.answer || '';
+      }catch(err){
+        typing.remove();
+        addMsg(`<em class="muted">Network error</em>`);
+      }
+    });
+
+    // Keyboard: Cmd/Ctrl+Enter to send
+    q.addEventListener('keydown', (e)=>{
+      if((e.metaKey || e.ctrlKey) && e.key === 'Enter'){
+        form.requestSubmit();
+      }
+    });
+
+    // Clear chat
+    clearBtn.addEventListener('click', ()=>{
+      chat.innerHTML = '';
+      history = [];
+      lastAnswer = null;
+    });
+
+    // Regenerate last answer
+    regenBtn.addEventListener('click', async ()=>{
+      const lastQ = history[history.length - 1];
+      if(!lastQ){ return; }
+      // Show small hint
+      addMsg(`<em class="muted">Regenerating: “${lastQ}”</em>`);
+      const typing = addTyping();
+      try{
+        const resp = await fetch(askUrl, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','X-CSRFToken':csrftoken},
+          body: JSON.stringify({ question: lastQ })
+        });
+        const data = await resp.json();
+        typing.remove();
+        if(!resp.ok){
+          addMsg(`<em class="muted">Error: ${data.error || resp.status}</em>`);
+          return;
+        }
+        const bubble = addMsg('', false, data.citations || []);
+        const txt = (data.answer || '(no answer)').split('');
+        let i=0; const tick=()=>{ if(i<txt.length){ bubble.insertAdjacentText('afterbegin', txt[i]); i++; requestAnimationFrame(tick);} };
+        bubble.insertAdjacentText('afterbegin',''); requestAnimationFrame(tick);
+        lastAnswer = data.answer || '';
+      }catch(err){
+        typing.remove();
+        addMsg(`<em class="muted">Network error</em>`);
+      }
+    });
+  </script>
+</body>
+</html>

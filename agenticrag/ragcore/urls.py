@@ -3,6 +3,8 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='index'),
-    path('upload/', views.upload_files, name='upload'),
-    path('ask/', views.ask_question, name='ask'),
+    path("rags/", views.rags_list, name="rags_list"),
+    path("rags/<slug:slug>/", views.rag_detail, name="rag_detail"),
+    path("rags/<slug:slug>/ask/", views.ask_question, name="ask_question"),
+    # path("upload/", views.upload_files, name="upload_files"),
 ]
