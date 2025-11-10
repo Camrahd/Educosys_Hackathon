@@ -8,6 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from .vectorstore import get_vectorstore
 from dotenv import load_dotenv
+from .views import get_answer_prompt
 load_dotenv()
 
 SYSTEM_PROMPT = """You are a helpful RAG assistant.
@@ -52,3 +53,34 @@ def rag_answer(question: str, collection_name: str = "rag") -> Tuple[str, List[s
             citations.append(src)
 
     return answer, citations
+
+def get_rag_answer_saranya(question: str, collection_name: str = "rag") -> Tuple[str, List[str]]:
+    vector_store =  get_vectorstore(collection_name)
+
+    # Step 2: Retrieve top-k most relevant chunks
+    k = 5  # number of chunks to retrieve
+    results = vector_store.similarity_search(question, k=k)
+
+    # Step 3: Prepare context text from retrieved chunks
+    context = "\n\n".join([doc.page_content for doc in results])
+
+    # Step 4: Create a response-generation prompt
+    answer_prompt = get_answer_prompt(question, context)
+
+    # Step 5: Generate answer using LLM
+    llm = ChatOpenAI(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        temperature=0.3,
+        api_key=os.getenv("OPENAI_API_KEY"),
+    )
+
+    answer_msg = llm.invoke([("system", "You are a helpful assistant."), ("user", answer_prompt)])
+    answer_text = (getattr(answer_msg, "content", "") or "").strip()
+
+    # Step 6: Return or send back the final answer
+    return {
+        "question": question,
+        "collection_used": collection_name,
+        "answer": answer_text,
+        "retrieved_chunks": [doc.page_content for doc in results]
+    }
