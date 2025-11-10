@@ -271,6 +271,7 @@ def ask_question(request: HttpRequest, slug: str):
     except Exception:
         # Fallback to default collection if parsing fails
         collection_name = f"rag_{slug}"
+    print(f'Collection chosen: {collection_name}')
     from .rag.rag_engine import rag_answer, get_rag_answer_saranya
     #option1
     answer, citations = rag_answer(question, collection_name=collection_name)
