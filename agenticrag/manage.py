@@ -7,7 +7,9 @@ load_dotenv()
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'agenticrag.settings')
+    load_dotenv()  # 👈 add this — loads your .env file automatically
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "agenticrag.settings")
+    # os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'agenticrag.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
