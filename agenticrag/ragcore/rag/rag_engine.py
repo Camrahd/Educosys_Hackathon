@@ -8,7 +8,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from .vectorstore import get_vectorstore
 from dotenv import load_dotenv
-from .views import get_answer_prompt
+from ragcore.views import get_answer_prompt
 load_dotenv()
 
 SYSTEM_PROMPT = """You are a helpful RAG assistant.
