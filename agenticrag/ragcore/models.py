@@ -30,6 +30,7 @@ class RAGFile(models.Model):
     rag = models.ForeignKey(RAG, on_delete=models.CASCADE, related_name="files")
     file = models.FileField(upload_to="rag_files/")
     metadata = models.JSONField(default=dict, blank=True)  # dynamic metadata storage
+    collection_name = models.CharField(max_length=255)  # to track vectorstore collection
 
     # Auto tracking
     uploaded_at = models.DateTimeField(auto_now_add=True)
