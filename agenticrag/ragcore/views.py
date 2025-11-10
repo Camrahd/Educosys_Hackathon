@@ -280,3 +280,13 @@ def ask_question(request: HttpRequest, slug: str):
     response  = get_rag_answer_saranya(question, collection_name=collection_name)
     print(f"Second response: {response}")
     return JsonResponse({"answer": answer, "citations": citations, 'response': response})
+
+from django.views.decorators.http import require_GET
+
+@require_GET
+def check_rag_name(request: HttpRequest):
+    name = (request.GET.get("name") or "").strip()
+    exists = False
+    if name:
+        exists = RAG.objects.filter(name__iexact=name).exists()
+    return JsonResponse({"exists": exists})
