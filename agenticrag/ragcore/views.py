@@ -1,5 +1,7 @@
 import json
 import os
+from pathlib import Path
+import uuid
 from datetime import datetime
 from typing import List
 
@@ -10,10 +12,12 @@ from django.views.decorators.csrf import csrf_exempt
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI
+from langchain_community.vectorstores import Chroma
 
 from .rag.loader import load_document
 from .rag.vectorstore import get_vectorstore
 from .models import RAG, RAGFile
+from .rag.embeddings import get_embeddings
 
 
 # ------------------------ Helpers ------------------------
@@ -132,12 +136,14 @@ def index(request: HttpRequest):
 
         # Vectorstore collection per RAG (isolated)
         collection = f"rag_{rag_inst.slug}"
-        vectordb = get_vectorstore(collection_name=collection)
+        
 
         # Save + ingest each file
         for f in files:
             # Save via FileField: stored at MEDIA_ROOT/rag_files/<name>
-            rag_file = RAGFile.objects.create(rag=rag_inst, file=f)
+            unique_id = uuid.uuid4().hex  # or str(uuid.uuid4()) if you want dashes
+            vectordb = get_vectorstore(collection_name=f'{collection}_{unique_id}')
+            rag_file = RAGFile.objects.create(rag=rag_inst, file=f, collection_name=f'{collection}_{unique_id}')
 
             # Parse from disk path
             docs = load_document(rag_file.file.path)
@@ -178,25 +184,98 @@ def rag_detail(request: HttpRequest, slug: str):
     files = rag.files.order_by("id")
     return render(request, "rag_chat.html", {"rag": rag, "files": files})
 
+def generate_rag_collection_selection_prompt(question, rag_file_name_meta_data_dict):
+    return f"""
+You are a reasoning assistant that decides which document collection in a vector database 
+is most relevant to answer a user's query.
+
+User query:
+\"\"\"{question}\"\"\"
+
+Below are available collections and their associated metadata:
+
+{json.dumps(rag_file_name_meta_data_dict, indent=2)}
+
+Your task:
+1. Analyze the user query.
+2. Based on metadata, select the most relevant collection(s) for retrieval.
+3. Return your answer as a JSON object with a key "selected_collections" containing a list 
+   of collection names. Do not include explanations or additional text.
+
+Example output:
+{{"selected_collections": ["collection_abc123"]}}
+"""
+
+def get_answer_prompt(question: str, context: str) -> str:
+    return f"""
+    You are an expert assistant. Use the following retrieved context to answer the user's question.
+
+    Context:
+    \"\"\"{context}\"\"\"
+
+    User question:
+    \"\"\"{question}\"\"\"
+
+    Instructions:
+    - If the answer is directly supported by the context, use it.
+    - If the context doesn’t contain enough information, say “I don’t have enough data to answer confidently.”
+    - Be clear and concise.
+
+    Return only the final answer text.
+    """
 
 @csrf_exempt
 def ask_question(request: HttpRequest, slug: str):
     """POST {question} -> answer using the specific RAG (collection rag_<slug>)."""
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=400)
-
     try:
         data = json.loads(request.body or "{}")
     except Exception:
         return JsonResponse({"error": "Invalid JSON"}, status=400)
-
+    if RAG.objects.filter(slug=slug).count() == 0:
+        #no such rag exists, redirect to list of rags
+        return JsonResponse({"error": "RAG not found"}, status=404)
     question = (data.get("question") or "").strip()
     if not question:
         return JsonResponse({"error": "Question missing"}, status=400)
-
-    # Retrieve against just this RAG’s vectors
-    collection = f"rag_{slug}"
-    from .rag.rag_engine import rag_answer
-    answer, citations = rag_answer(question, collection_name=collection)
-
-    return JsonResponse({"answer": answer, "citations": citations})
+    
+    rag_inst = RAG.objects.get(slug=slug)
+    rag_files = RAGFile.objects.filter(rag=rag_inst)
+    if rag_files.count() == 0:
+        #no files ingested for this rag, redirect to list of rags
+        return JsonResponse({"error": "No files ingested for this RAG"}, status=404)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=400)
+    rag_file_name_meta_data_dict = {}
+    for rag_file in rag_files:
+        rag_file_name_meta_data_dict[os.path.basename(rag_file.file.name)] = {
+                                                                                'metadata': rag_file.metadata,
+                                                                                'collection_name': rag_file.collection_name
+                                                                             }
+    
+    #make LLM call to decide the file to be considered based on the user query
+    retriever_selection_prompt = generate_rag_collection_selection_prompt(question, rag_file_name_meta_data_dict)
+    llm = ChatOpenAI(
+        model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        temperature=0,
+        api_key=os.getenv("OPENAI_API_KEY"),
+    )
+    msg = llm.invoke([("system", "Return ONLY valid JSON."), ("user", retriever_selection_prompt)])
+    text = (getattr(msg, "content", "") or "").strip()  
+    try:
+        selection_response = json.loads(text)
+        selected_collections = selection_response.get("selected_collections", [])
+        if not selected_collections:
+            raise ValueError("No collections selected")
+        # For simplicity, consider only the first selected collection
+        collection_name = selected_collections[0]
+    except Exception:
+        # Fallback to default collection if parsing fails
+        collection_name = f"rag_{slug}"
+    from .rag.rag_engine import rag_answer, get_rag_answer_saranya
+    #option1
+    answer, citations = rag_answer(question, collection_name=collection_name)
+    print(answer, citations)
+    #option2
+    response  = get_rag_answer_saranya(question, collection_name=collection_name)
+    print(f"Second response: {response}")
+    return JsonResponse({"answer": answer, "citations": citations, 'response': response})
