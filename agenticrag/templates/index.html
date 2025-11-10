@@ -6,22 +6,29 @@
   <title>Agentic RAG Creator</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
       background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-      min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+      min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px
+    }
     .container{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);
       max-width:720px;width:100%;padding:32px}
     .header{text-align:center;margin-bottom:16px}
     .header h1{font-size:28px;color:#1f2937}
     .header p{color:#6b7280}
-    .top-link{ text-align:center;margin:8px 0 16px }
-    .top-link a{ color:#fff; text-decoration:underline }
+    .top-link{text-align:center;margin:8px 0 16px}
+    .top-link a{display:inline-block;padding:10px 14px;border-radius:10px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;box-shadow:0 6px 14px rgba(79,70,229,.3)}
     .form-group{margin:16px 0}
     label{display:block;color:#111827;font-weight:600;margin-bottom:8px;font-size:14px}
     input[type=text], textarea{
       width:100%;padding:12px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:16px}
-    input[type=text]:focus, textarea:focus{
-      outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    input[type=text]:focus, textarea:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .name-row{display:flex;gap:8px;align-items:center}
+    .pill{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid #e5e7eb;color:#6b7280;white-space:nowrap}
+    .pill.ok{border-color:#10b981;color:#065f46;background:#ecfdf5}
+    .pill.bad{border-color:#ef4444;color:#7f1d1d;background:#fef2f2}
+    .hint{font-size:12px;color:#6b7280;margin-top:6px}
+
     .file-input-wrapper{position:relative;border:2px dashed #cbd5e0;border-radius:10px;
       padding:24px;text-align:center;background:#f9fafb;cursor:pointer}
     .file-input-wrapper:hover{border-color:#6366f1;background:#eef2ff}
@@ -34,10 +41,58 @@
     .create-btn{width:100%;padding:14px;border:none;border-radius:10px;color:#fff;
       background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
       font-weight:700;cursor:pointer;box-shadow:0 8px 20px rgba(99,102,241,.35)}
+    .create-btn:disabled{opacity:.6;cursor:not-allowed}
     .error{margin-top:8px;color:#b91c1c}
+
+    /* Full-screen overlay */
+    .overlay{
+      position:fixed; inset:0; background:rgba(15,23,42,.6); backdrop-filter: blur(4px);
+      display:none; align-items:center; justify-content:center; z-index:9999;
+    }
+    .overlay.show{display:flex}
+    .card{
+      width:min(92vw,420px); background:#0b1226; color:#e5e7eb; border:1px solid #1f2937; border-radius:16px; padding:20px;
+      box-shadow:0 10px 30px rgba(2,6,23,.5);
+    }
+    .rowc{display:flex; align-items:center; gap:12px}
+    .spinner{
+      width:28px; height:28px; border-radius:50%;
+      border:3px solid rgba(99,102,241,.25);
+      border-top-color:#8b5cf6; animation:spin 1s linear infinite
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .steps{margin-top:12px; font-size:14px}
+    .step{display:flex;align-items:center;gap:8px;margin:6px 0}
+    .step .dot{width:8px;height:8px;border-radius:50%;background:#475569}
+    .step.active .dot{background:#8b5cf6}
+    .bar{height:8px;border-radius:999px;background:#111827;border:1px solid #1f2937;margin-top:12px;overflow:hidden}
+    .bar>div{height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#06b6d4); transition:width .3s ease}
+    .small{font-size:12px;color:#94a3b8;margin-top:8px;text-align:right}
   </style>
 </head>
 <body>
+  <!-- Overlay while creating embeddings -->
+  <div class="overlay" id="overlay">
+    <div class="card">
+      <div class="rowc">
+        <div class="spinner"></div>
+        <div>
+          <div style="font-weight:700">Creating embeddings & indexing…</div>
+          <div class="small">Please keep this tab open</div>
+        </div>
+      </div>
+      <div class="steps" id="steps">
+        <div class="step active"><span class="dot"></span> Uploading files</div>
+        <div class="step"><span class="dot"></span> Parsing & chunking</div>
+        <div class="step"><span class="dot"></span> Embedding & storing</div>
+        <div class="step"><span class="dot"></span> Finalizing</div>
+      </div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div class="small" id="progressHint">Starting…</div>
+    </div>
+  </div>
+
   <div class="container">
     <div class="header">
       <h1>🤖 Agentic RAG Creator</h1>
@@ -45,25 +100,19 @@
     </div>
 
     <p class="top-link">
-        <a href="/rags/" style="
-           display:inline-block;
-           padding:10px 14px;
-           border-radius:10px;
-           background:#4f46e5;
-           color:#fff;
-           text-decoration:none;
-           font-weight:700;
-           box-shadow:0 6px 14px rgba(79,70,229,.3);
-        ">
-          Browse my RAGs →
-        </a>
-      </p>
+      <a href="/rags/">Browse my RAGs →</a>
+    </p>
 
     <form id="ragForm" method="post" enctype="multipart/form-data">
       {% csrf_token %}
+
       <div class="form-group">
         <label for="ragName">RAG System Name *</label>
-        <input id="ragName" name="ragName" type="text" placeholder="e.g., Customer Support Knowledge Base" required />
+        <div class="name-row">
+          <input id="ragName" name="ragName" type="text" placeholder="e.g., Customer Support Knowledge Base" required />
+          <span class="pill" id="nameStatus">Checking…</span>
+        </div>
+        <div class="hint">Names must be unique.</div>
       </div>
 
       <div class="form-group">
@@ -89,47 +138,115 @@
         <div class="error">{{ error }}</div>
       {% endif %}
 
-      <button id="createBtn" class="create-btn" type="submit">Create Agentic RAG</button>
+      <button id="createBtn" class="create-btn" type="submit" disabled>Create Agentic RAG</button>
     </form>
   </div>
 
   <script>
+    // ------------ Elements
     let selectedFiles = [];
     const fileInput = document.getElementById('files');
     const fileWrapper = document.getElementById('fileWrapper');
     const fileList = document.getElementById('fileList');
     const form = document.getElementById('ragForm');
+    const createBtn = document.getElementById('createBtn');
+    const ragName = document.getElementById('ragName');
+    const nameStatus = document.getElementById('nameStatus');
 
+    const overlay = document.getElementById('overlay');
+    const steps = Array.from(document.querySelectorAll('.step'));
+    const barFill = document.getElementById('barFill');
+    const progressHint = document.getElementById('progressHint');
+
+    // ------------ Drag & drop
     fileInput.addEventListener('change', e => handleFiles(e.target.files));
     fileWrapper.addEventListener('dragover', e => { e.preventDefault(); fileWrapper.classList.add('dragover'); });
     fileWrapper.addEventListener('dragleave', e => { e.preventDefault(); fileWrapper.classList.remove('dragover'); });
     fileWrapper.addEventListener('drop', e => {
       e.preventDefault(); fileWrapper.classList.remove('dragover'); handleFiles(e.dataTransfer.files);
     });
-
     function handleFiles(files) { selectedFiles = Array.from(files); displayFiles(); }
-
     function displayFiles() {
-      if (!selectedFiles.length) return fileList.classList.remove('show');
+      if (!selectedFiles.length){ fileList.classList.remove('show'); return; }
       fileList.classList.add('show');
       fileList.innerHTML = selectedFiles.map((f, i) =>
         `<div class="file-item"><span>${f.name}</span><span class="remove-file" onclick="removeFile(${i})">✕</span></div>`
       ).join('');
     }
-
     function removeFile(i) {
       selectedFiles.splice(i, 1);
       const dt = new DataTransfer();
       selectedFiles.forEach(f => dt.items.add(f));
       fileInput.files = dt.files;
       displayFiles();
+      updateSubmitEnabled();
     }
 
-    form.addEventListener('submit', e => {
-      const name = document.getElementById('ragName').value.trim();
-      if (!name) { e.preventDefault(); alert('Please enter a RAG system name'); return; }
-      if (!fileInput.files.length) { e.preventDefault(); alert('Please upload at least one file'); return; }
+    // ------------ Name availability (debounced)
+    let debounceTimer = null;
+    ragName.addEventListener('input', () => {
+      nameStatus.className = 'pill';
+      nameStatus.textContent = 'Checking…';
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(checkName, 300);
     });
+
+    async function checkName(){
+      const val = ragName.value.trim();
+      if (!val){ setBad('Enter a name'); updateSubmitEnabled(); return; }
+      try{
+        const resp = await fetch(`/rags/check-name/?name=${encodeURIComponent(val)}`, {headers: {'Accept': 'application/json'}});
+        const data = await resp.json();
+        if (data.exists){
+          setBad('Name already exists');
+        } else {
+          setOk('Available');
+        }
+      }catch(e){
+        setBad('Can’t verify');
+      }
+      updateSubmitEnabled();
+    }
+
+    function setOk(text){ nameStatus.className = 'pill ok'; nameStatus.textContent = text; }
+    function setBad(text){ nameStatus.className = 'pill bad'; nameStatus.textContent = text; }
+
+    function updateSubmitEnabled(){
+      const nameOk = nameStatus.classList.contains('ok');
+      const hasFiles = fileInput.files && fileInput.files.length > 0;
+      createBtn.disabled = !(nameOk && hasFiles);
+    }
+
+    fileInput.addEventListener('change', updateSubmitEnabled);
+
+    // ------------ Overlay UX
+    function setStep(i, hint, pct){
+      steps.forEach((s,idx)=> s.classList.toggle('active', idx <= i));
+      if (hint) progressHint.textContent = hint;
+      if (typeof pct === 'number') barFill.style.width = pct + '%';
+    }
+
+    // ------------ Submit (show overlay/progress)
+    form.addEventListener('submit', e => {
+      const name = ragName.value.trim();
+      if (!name){ e.preventDefault(); alert('Please enter a RAG system name'); return; }
+      if (!fileInput.files.length){ e.preventDefault(); alert('Please upload at least one file'); return; }
+      if (!nameStatus.classList.contains('ok')){ e.preventDefault(); alert('Please choose a unique name'); return; }
+
+      // Show overlay
+      overlay.classList.add('show');
+      createBtn.disabled = true;
+
+      // Simulated progress while server works (since it’s a full POST/navigation)
+      setStep(0, 'Uploading files…', 12);
+      setTimeout(()=>setStep(1, 'Parsing & chunking…', 38), 600);
+      setTimeout(()=>setStep(2, 'Embedding & storing…', 72), 1200);
+      setTimeout(()=>setStep(3, 'Finalizing…', 88), 2000);
+      // Final 100% will be reached when page navigates to chat page.
+    });
+
+    // Initial check
+    checkName();
   </script>
 </body>
 </html>
