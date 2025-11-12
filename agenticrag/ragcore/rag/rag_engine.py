@@ -54,7 +54,7 @@ def rag_answer(question: str, collection_name: str = "rag") -> Tuple[str, List[s
 
     return answer, citations
 
-def get_rag_answer_saranya(question: str, collection_name: str = "rag") -> Tuple[str, List[str]]:
+def get_rag_answer(question: str, collection_name: str = "rag") -> Tuple[str, List[str]]:
     vector_store =  get_vectorstore(collection_name)
 
     # Step 2: Retrieve top-k most relevant chunks

@@ -272,12 +272,12 @@ def ask_question(request: HttpRequest, slug: str):
         # Fallback to default collection if parsing fails
         collection_name = f"rag_{slug}"
     print(f'Collection chosen: {collection_name}')
-    from .rag.rag_engine import rag_answer, get_rag_answer_saranya
+    from .rag.rag_engine import rag_answer, get_rag_answer
     #option1
     answer, citations = rag_answer(question, collection_name=collection_name)
     print(answer, citations)
     #option2
-    response  = get_rag_answer_saranya(question, collection_name=collection_name)
+    response  = get_rag_answer(question, collection_name=collection_name)
     print(f"Second response: {response}")
     return JsonResponse({"answer": answer, "citations": citations, 'response': response})
 

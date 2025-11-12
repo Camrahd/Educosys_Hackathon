@@ -8,3 +8,4 @@ static/
 */migrations/
 /migrations/__init__.py
 .env
+rag_files/
