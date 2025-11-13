@@ -1,4 +1,4 @@
-# 🧠 AgenticRAG —  RAG Assistant 
+# 🧠 RAG —  RAG Assistant for Multiple files
 
 AgenticRAG is a **Retrieval-Augmented Generation (RAG)** web app built with **Django** and **LangChain**.  
 It lets users upload documents (PDF or text), embed them locally using OpenAI’s embedding models, store them in a persistent **ChromaDB**, and query them via a chat-like interface powered by **GPT-4o-mini**.
